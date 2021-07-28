@@ -1,0 +1,34 @@
+const REGION = 'asia-northeast1'
+const runtimeOpts = {
+    timeoutSeconds: 10,
+    memory: "2GB"
+}
+const functions = require('firebase-functions')
+const {WebhookClient, Payload} = require("dialogflow-fulfillment")
+const message = require('./message')
+let parameters
+
+exports.dialogflowFulfillment = functions.region(REGION).runWith(runtimeOpts).https.onRequest(async (request, response) => {
+    parameters = request.body.queryResult.parameters
+    agent = new WebhookClient({request,response})
+    let intentMap = new Map()
+    intentMap.set('Order', orderSlotFilling)
+    agent.handleRequest(intentMap)
+})
+
+const orderSlotFilling = async () => {
+    let {size, color, qty} = parameters
+    let filling_message = ''
+    
+    if (!size) {
+        filling_message = message.size_filling()
+    } else if(!color) {
+        filling_message = message.color_filling()
+    } else if(!qty) {
+        filling_message = message.qty_filling()
+    }
+    if(filling_message !== '') {
+        let payload = new Payload(`LINE`, filling_message, {sendAsMessage: true})
+        return agent.add(payload)
+    }
+}
